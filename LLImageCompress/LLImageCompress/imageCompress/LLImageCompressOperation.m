@@ -168,8 +168,8 @@ dispatch_async(queue, block);\
         for(LLCompressFinishedBlock block in self.callbacks){
             block(data,size);
         }
+        [self done];
     });
-    [self done];
 }
 
 @end
