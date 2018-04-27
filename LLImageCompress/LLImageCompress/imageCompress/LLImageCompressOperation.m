@@ -74,8 +74,8 @@ dispatch_async(queue, block);\
         }
         //修改状态 任务执行中
         self.executing = YES;
-        [self compressImage:_targetImage maxSize:_maxSize maxFileSize:_maxFileSize];
     }
+    [self compressImage:_targetImage maxSize:_maxSize maxFileSize:_maxFileSize];
 }
 
 - (void)done {
@@ -120,56 +120,87 @@ dispatch_async(queue, block);\
 - (void)compressImage:(NSImage *)aImage maxSize:(CGSize)aMaxSize maxFileSize:(CGFloat)maxFileSize
 {
     //先调整分辨率
-    __block CGSize maxSize = aMaxSize;
-//    CGFloat scale = 2.;
+    CGSize maxSize = aMaxSize;
     if (CGSizeEqualToSize(aMaxSize, CGSizeZero)) {
-//        maxSize = CGSizeMake(2048*scale, 2048*scale);
         maxSize = CGSizeMake(4096, 4096);
     }
-    CGSize imgSize = aImage.size;
+    
     NSImage *reSizeImage = aImage;
-    if (imgSize.width > maxSize.width || imgSize.height > maxSize.height) {
+    if (reSizeImage.size.width > maxSize.width || reSizeImage.size.height > maxSize.height) {
         reSizeImage = [aImage scaleAspectFitToSize:maxSize transparent:NO];
     }
     
-    __block NSData *finallImageData = [reSizeImage TIFFRepresentation];
-    NSUInteger sizeOrigin   = finallImageData.length;
+    NSData *originalData = [reSizeImage TIFFRepresentation];
+    NSLog(@"🦋🦋🦋🦋🦋🦋🦋🦋🦋🦋 原始质量%fMB",originalData.length / (1024. * 1024.));
+    NSUInteger sizeOrigin   = originalData.length;
     CGFloat sizeOriginMB = sizeOrigin / (1024. * 1024.);
     if (sizeOriginMB <= maxFileSize) {
-        [self didFinishedWithData:finallImageData size:reSizeImage.size];
+        [self didFinishedWithData:originalData size:reSizeImage.size];
         return;
     }
-    NSData *tmp = [finallImageData copy];
     //思路：使用二分法搜索
-    finallImageData = [reSizeImage halfFuntionForMaxFileSize:maxFileSize];
+    NSData *compressedData = [reSizeImage halfFuntionForMaxFileSize:maxFileSize];
+    if (compressedData.length > 0) {
+        [self didFinishedWithData:compressedData size:reSizeImage.size];
+        return;
+    }
+    
+    NSInteger loopCount = 0;
+    NSData *tmpData = [originalData copy];
+    CGSize imgSize = reSizeImage.size;
     //如果还是未能压缩到指定大小，则进行降分辨率
-    while (finallImageData.length == 0) {
-        //每次降100分辨率
-        if (maxSize.width-100 <= 0 || maxSize.height-100 <= 0) {
-            finallImageData = tmp;
+    while (compressedData.length == 0) {
+        loopCount++;
+        NSLog(@"😐😐😐😐😐😐😐😐😐😐已经缩减尺寸了%tu次",loopCount);
+        //每次长的一边递减100分辨率，另一边以宽高比减少相应长度
+        NSAssert(imgSize.height > 0, @"除数为0!");
+        CGFloat delt = imgSize.width / imgSize.height;
+        CGFloat deltWidth = imgSize.width;
+        CGFloat deltHeight = imgSize.height;
+        if(delt >= 1) {
+            deltWidth -=  100;
+            deltHeight -= deltWidth / delt;
+        } else {
+            deltHeight -= 100;
+            deltWidth -=  delt * deltHeight;
+        }
+        if (deltWidth <= 0 || deltHeight <= 0) {
+            compressedData = tmpData;
             break;
         }
-        maxSize = CGSizeMake(maxSize.width-100, maxSize.height-100);
-        NSImage *image = [aImage scaleAspectFitToSize:maxSize transparent:NO];
+        imgSize = CGSizeMake(deltWidth, deltHeight);
+        NSImage *image = [aImage scaleAspectFitToSize:imgSize transparent:NO];
         if (!image) {
-            finallImageData = tmp;
+            compressedData = tmpData;
             break;
         } else {
-            finallImageData = [image halfFuntionForMaxFileSize:maxFileSize];
+            imgSize = image.size;
+            compressedData = [image halfFuntionForMaxFileSize:maxFileSize];
         }
     }
-    NSAssert(finallImageData != nil,@"finallImageData为空了");
-    [self didFinishedWithData:finallImageData size:reSizeImage.size];
+    NSAssert(compressedData != nil,@"finallImageData为空了");
+    if(compressedData.length / (1024. * 1024.) > maxFileSize){
+        NSLog(@"未能压缩到指定大小");
+        [self didFinishedWithData:nil size:CGSizeZero];
+        return;
+    }
+    [self didFinishedWithData:compressedData size:imgSize];
 }
 
 - (void)didFinishedWithData:(NSData *)data size:(CGSize)size
 {
+    NSLog(@"🦋🦋🦋🦋🦋🦋🦋🦋🦋🦋 Bingo:质量%fMB",data.length / (1024. * 1024.));
     dispatch_main_async_safe(^{
         for(LLCompressFinishedBlock block in self.callbacks){
             block(data,size);
         }
         [self done];
     });
+}
+
+- (void)dealloc
+{
+    NSLog(@"%s",__func__);
 }
 
 @end

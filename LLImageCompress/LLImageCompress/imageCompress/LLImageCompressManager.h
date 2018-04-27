@@ -11,7 +11,7 @@
 
 @interface LLImageCompressManager : NSObject
 
-+ (nonnull instancetype)shared;
++ (instancetype)shared;
 
 - (void)compressImageWithAsset:(id)asset
                      completed:(LLCompressFinishedBlock)completedBlock;

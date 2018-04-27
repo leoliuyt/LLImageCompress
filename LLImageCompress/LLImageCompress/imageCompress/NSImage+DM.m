@@ -35,6 +35,9 @@
         
         if (!NSEqualSizes(imageSize, targetSize))
         {
+            NSLog(@"😂😂😂😂😂😂😂😂😂😂我被裁剪了");
+            NSAssert(width > 0, @"除数width为0!");
+            NSAssert(height > 0, @"除数height为0!");
             float widthFactor  = targetWidth / width;
             float heightFactor = targetHeight / height;
             
@@ -109,6 +112,8 @@
         
         if (!NSEqualSizes(imageSize, targetSize))
         {
+            NSAssert(width > 0, @"除数width为0!");
+            NSAssert(height > 0, @"除数height为0!");
             float widthFactor  = targetWidth / width;
             float heightFactor = targetHeight / height;
             
@@ -189,33 +194,26 @@
     
     NSData *finallImageData = [self TIFFRepresentation];
     NSData *tempData = [NSData data];
-    NSUInteger start = 0;
-    NSUInteger end = arr.count - 1;
-    NSUInteger index = 0;
+    NSInteger start = 0;
+    NSInteger end = arr.count - 1;
     
-    NSUInteger difference = NSIntegerMax;
-    while(start < end) {
-        index = start + (end - start)/2;
-        if(index >= arr.count) {
-            tempData = [self TIFFRepresentation];
-            return tempData;
-        }
+    while(end >= 0 && start <= end) {
+        NSInteger index = start + (end - start)/2;
+        NSLog(@"开始位置:%tu,结束位置:%tu,index:%tu",start,end,index);
+        NSAssert(index < arr.count, @"🤭🤭🤭🤭🤭🤭🤭🤭🤭🤭index >= count");
         finallImageData = [self compressFactor:[arr[index] floatValue]];
         
         NSUInteger sizeOrigin = finallImageData.length;
         CGFloat sizeOriginMB = sizeOrigin / (1024. * 1024.);
-        NSLog(@"leoliu 当前降到的质量：%f", sizeOriginMB);
-        NSLog(@"%lu----%lf", (unsigned long)index, [arr[index] floatValue]);
-        
+        NSLog(@"第%lu个位置的压缩,压缩系数为:%lf,压缩后的质量：%f", (unsigned long)index, [arr[index] floatValue],sizeOriginMB);
         if (sizeOriginMB > maxSize) {
             start = index + 1;
         } else if (sizeOriginMB < maxSize) {
-            if (maxSize-sizeOriginMB < difference) {
-                difference = maxSize-sizeOriginMB;
-                tempData = finallImageData;
-            }
+            tempData = finallImageData;
             end = index - 1;
         } else {
+            //刚好满足条件
+            tempData = finallImageData;
             break;
         }
     }

@@ -22,7 +22,7 @@
 @end
 @implementation LLImageCompressManager
 
-+ (nonnull instancetype)shared {
++ (instancetype)shared {
     static dispatch_once_t once;
     static id instance;
     dispatch_once(&once, ^{
@@ -31,11 +31,11 @@
     return instance;
 }
 
-- (nonnull instancetype)init {
-    return [self initWithMxSize:CGSizeZero maxFileSize:0];
+- (instancetype)init {
+    return [self initWithMaxSize:CGSizeZero maxFileSize:0];
 }
 
-- (instancetype)initWithMxSize:(CGSize)maxSize maxFileSize:(CGFloat)maxFileSize
+- (instancetype)initWithMaxSize:(CGSize)maxSize maxFileSize:(CGFloat)maxFileSize
 {
     if (self = [super init]) {
         _maxSize = CGSizeEqualToSize(maxSize, CGSizeZero) ? CGSizeMake(2048*2, 2048*2) : maxSize;
@@ -66,7 +66,7 @@
                  forAsset:(id)asset
            createCallback:(LLImageCompressOperation *(^)(void))createCallback {
     if (asset == nil) {
-        if (completedBlock != nil) {
+        if (completedBlock) {
             completedBlock(nil, NSZeroSize);
         }
         return;
