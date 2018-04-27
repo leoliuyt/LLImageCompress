@@ -87,7 +87,7 @@
         }
         return self;
     }
-    return nil;
+    return self;
 }
 
 
@@ -161,7 +161,7 @@
         }
         return self;
     }
-    return nil;
+    return self;
 }
 
 - (NSData *)compressFactor:(CGFloat)aFactor
@@ -175,10 +175,11 @@
 }
 
 
-static NSArray *arr = nil;
+
 - (NSData *)halfFuntionForMaxFileSize:(NSInteger)maxSize
 {
     //保存压缩系数
+    static NSArray *arr = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         NSMutableArray *compressionQualityArr = [NSMutableArray array];
