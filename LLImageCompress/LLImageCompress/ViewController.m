@@ -51,11 +51,32 @@
 
 - (void)testCompressManager:(NSArray *)array
 {
+    __weak typeof(self) weakSelf = self;
     [array enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
         [[LLImageCompressManager shared] compressImageWithAsset:obj completed:^(NSData *data, NSSize size) {
             NSLog(@"index = %tu,data = %lu,size = %@",idx,data.length,NSStringFromSize(size));
+            if (data) {
+                NSString *fileName = [NSString stringWithFormat:@"aa_%tu.jpg",data.hash];
+                NSString *path = [NSTemporaryDirectory() stringByAppendingPathComponent:fileName];
+                NSLog(@"path = %@",path);
+                [data writeToFile:path atomically:YES];
+                [weakSelf filesizeForPath:path];
+                
+                NSData *adata = [NSData dataWithContentsOfFile:path];
+                NSImage *image = [[NSImage alloc] initWithContentsOfFile:path];
+                NSLog(@"data == %lu===%f;image == %lu==%f",adata.length,adata.length / 1000000.,[image TIFFRepresentation].length,([image TIFFRepresentation].length / (1000. * 1000.)));
+//              LLImageCompress[18512:11943922] 6720957.000000==6.720957
+//              LLImageCompress[18512:11943922] data == 6720957===6.720957;image == 29216750==29.216750
+            }
         }];
     }];
+}
+
+- (void)filesizeForPath:(NSString *)aPath {
+//    /var/folders/cf/2w9p9n251x9b1gvcyt1p8tbw0000gp/T/com.msb.test.LLImageCompress/aa_123191792.jpg
+    NSDictionary *dic = [[NSFileManager defaultManager] attributesOfItemAtPath:aPath error:nil];
+    CGFloat filesize = [dic[NSFileSize] floatValue];
+    NSLog(@"%f==%f",filesize, filesize / 1000./1000.);
 }
 
 @end

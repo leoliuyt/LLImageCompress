@@ -35,9 +35,9 @@
         
         if (!NSEqualSizes(imageSize, targetSize))
         {
-            NSLog(@"😂😂😂😂😂😂😂😂😂😂我被裁剪了");
-            NSAssert(width > 0, @"除数width为0!");
-            NSAssert(height > 0, @"除数height为0!");
+            NSLog(@"IMGCOMPRESS:😂😂😂😂😂😂😂😂😂😂我被裁剪了");
+            NSAssert(width > 0, @"IMGCOMPRESS:除数width为0!");
+            NSAssert(height > 0, @"IMGCOMPRESS:除数height为0!");
             float widthFactor  = targetWidth / width;
             float heightFactor = targetHeight / height;
             
@@ -112,8 +112,8 @@
         
         if (!NSEqualSizes(imageSize, targetSize))
         {
-            NSAssert(width > 0, @"除数width为0!");
-            NSAssert(height > 0, @"除数height为0!");
+            NSAssert(width > 0, @"IMGCOMPRESS:除数width为0!");
+            NSAssert(height > 0, @"IMGCOMPRESS:除数height为0!");
             float widthFactor  = targetWidth / width;
             float heightFactor = targetHeight / height;
             
@@ -175,11 +175,11 @@
 }
 
 
+static NSArray *arr = nil;
 - (NSData *)halfFuntionForMaxFileSize:(NSInteger)maxSize
 {
     //保存压缩系数
     static dispatch_once_t onceToken;
-    static NSArray *arr = nil;
     dispatch_once(&onceToken, ^{
         NSMutableArray *compressionQualityArr = [NSMutableArray array];
         CGFloat avg   = 1.0/100;
@@ -199,13 +199,13 @@
     
     while(end >= 0 && start <= end) {
         NSInteger index = start + (end - start)/2;
-        NSLog(@"开始位置:%tu,结束位置:%tu,index:%tu",start,end,index);
-        NSAssert(index < arr.count, @"🤭🤭🤭🤭🤭🤭🤭🤭🤭🤭index >= count");
+        NSLog(@"IMGCOMPRESS:开始位置:%tu,结束位置:%tu,index:%tu",start,end,index);
+        NSAssert(index < arr.count, @"IMGCOMPRESS:🤭🤭🤭🤭🤭🤭🤭🤭🤭🤭index >= count");
         finallImageData = [self compressFactor:[arr[index] floatValue]];
         
         NSUInteger sizeOrigin = finallImageData.length;
         CGFloat sizeOriginMB = sizeOrigin / (1024. * 1024.);
-        NSLog(@"第%lu个位置的压缩,压缩系数为:%lf,压缩后的质量：%f", (unsigned long)index, [arr[index] floatValue],sizeOriginMB);
+        NSLog(@"IMGCOMPRESS:第%lu个位置的压缩,压缩系数为:%lf,压缩后的质量：%f", (unsigned long)index, [arr[index] floatValue],sizeOriginMB);
         if (sizeOriginMB > maxSize) {
             start = index + 1;
         } else if (sizeOriginMB < maxSize) {

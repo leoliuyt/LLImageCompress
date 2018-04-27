@@ -36,6 +36,8 @@ dispatch_async(queue, block);\
 
 @property (nonatomic, strong) NSMutableArray *callbacks;
 
+@property (nonatomic, strong) NSData *fileData;
+
 @end
 @implementation LLImageCompressOperation
 
@@ -51,12 +53,14 @@ dispatch_async(queue, block);\
         _maxFileSize = maxFileSize;
         if ([asset isKindOfClass:[NSString class]]) {
             _targetImage = [[NSImage alloc] initWithContentsOfFile:asset];
+            _fileData = [NSData dataWithContentsOfFile:asset];
         } else if ([asset isKindOfClass:[NSURL class]]){
             _targetImage = [[NSImage alloc] initWithContentsOfURL:asset];
+            _fileData = [NSData dataWithContentsOfURL:asset];
         } else {
             _targetImage = asset;
         }
-        NSAssert(_targetImage != nil, @"资源有问题");
+        NSAssert(_targetImage != nil, @"IMGCOMPRESS:资源有问题");
         _callbacksLock = dispatch_semaphore_create(1);
         _callbacks = [NSMutableArray array];
     }
@@ -88,6 +92,7 @@ dispatch_async(queue, block);\
     LOCK(self.callbacksLock);
     [self.callbacks removeAllObjects];
     UNLOCK(self.callbacksLock);
+    _fileData = nil;
 }
 
 - (void)setFinished:(BOOL)finished {
@@ -126,22 +131,24 @@ dispatch_async(queue, block);\
     }
     
     NSImage *reSizeImage = aImage;
+    NSData *originalData;
     if (reSizeImage.size.width > maxSize.width || reSizeImage.size.height > maxSize.height) {
         reSizeImage = [aImage scaleAspectFitToSize:maxSize transparent:NO];
+        originalData = [reSizeImage TIFFRepresentation];
+    } else {
+        //如果是通过路径传过来的，直接从路径中取文件数据
+        originalData = self.fileData ? self.fileData : [reSizeImage TIFFRepresentation];
     }
-    
-    NSData *originalData = [reSizeImage TIFFRepresentation];
-    NSLog(@"🦋🦋🦋🦋🦋🦋🦋🦋🦋🦋 原始质量%fMB",originalData.length / (1024. * 1024.));
-    NSUInteger sizeOrigin   = originalData.length;
-    CGFloat sizeOriginMB = sizeOrigin / (1024. * 1024.);
+    NSLog(@"IMGCOMPRESS:🦋🦋🦋🦋🦋🦋🦋🦋🦋🦋 原始质量%fMB",originalData.length / (1024. * 1024.));
+    CGFloat sizeOriginMB = originalData.length / (1024. * 1024.);
     if (sizeOriginMB <= maxFileSize) {
         [self didFinishedWithData:originalData size:reSizeImage.size];
         return;
     }
     //思路：使用二分法搜索
-    NSData *compressedData = [reSizeImage halfFuntionForMaxFileSize:maxFileSize];
+    NSData *compressedData = (NSData *)[reSizeImage halfFuntionForMaxFileSize:maxFileSize];
     if (compressedData.length > 0) {
-        [self didFinishedWithData:compressedData size:reSizeImage.size];
+        [self didFinishedWithData:(NSData *)compressedData size:reSizeImage.size];
         return;
     }
     
@@ -151,9 +158,9 @@ dispatch_async(queue, block);\
     //如果还是未能压缩到指定大小，则进行降分辨率
     while (compressedData.length == 0) {
         loopCount++;
-        NSLog(@"😐😐😐😐😐😐😐😐😐😐已经缩减尺寸了%tu次",loopCount);
+        NSLog(@"IMGCOMPRESS:😐😐😐😐😐😐😐😐😐😐已经缩减尺寸了%tu次",loopCount);
         //每次长的一边递减100分辨率，另一边以宽高比减少相应长度
-        NSAssert(imgSize.height > 0, @"除数为0!");
+        NSAssert(imgSize.height > 0, @"IMGCOMPRESS:除数为0!");
         CGFloat delt = imgSize.width / imgSize.height;
         CGFloat deltWidth = imgSize.width;
         CGFloat deltHeight = imgSize.height;
@@ -178,9 +185,9 @@ dispatch_async(queue, block);\
             compressedData = [image halfFuntionForMaxFileSize:maxFileSize];
         }
     }
-    NSAssert(compressedData != nil,@"finallImageData为空了");
+    NSAssert(compressedData != nil,@"IMGCOMPRESS:finallImageData为空了");
     if(compressedData.length / (1024. * 1024.) > maxFileSize){
-        NSLog(@"未能压缩到指定大小");
+        NSLog(@"IMGCOMPRESS:未能压缩到指定大小");
         [self didFinishedWithData:nil size:CGSizeZero];
         return;
     }
@@ -189,7 +196,7 @@ dispatch_async(queue, block);\
 
 - (void)didFinishedWithData:(NSData *)data size:(CGSize)size
 {
-    NSLog(@"🦋🦋🦋🦋🦋🦋🦋🦋🦋🦋 Bingo:质量%fMB",data.length / (1024. * 1024.));
+    NSLog(@"IMGCOMPRESS:🦋🦋🦋🦋🦋🦋🦋🦋🦋🦋 Bingo:质量%fMB",data.length / (1024. * 1024.));
     dispatch_main_async_safe(^{
         for(LLCompressFinishedBlock block in self.callbacks){
             block(data,size);
@@ -200,7 +207,7 @@ dispatch_async(queue, block);\
 
 - (void)dealloc
 {
-    NSLog(@"%s",__func__);
+    NSLog(@"IMGCOMPRESS:%s",__func__);
 }
 
 @end
