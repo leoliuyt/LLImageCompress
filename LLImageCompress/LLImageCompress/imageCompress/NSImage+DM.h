@@ -38,4 +38,6 @@
 - (NSData *)compressFactor:(CGFloat)aFactor;
 
 - (NSData *)halfFuntionForMaxFileSize:(NSInteger)maxSize;
+
+- (BOOL)writeToFile:(NSURL *)fileURL;
 @end

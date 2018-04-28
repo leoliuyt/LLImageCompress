@@ -166,14 +166,29 @@
 
 - (NSData *)compressFactor:(CGFloat)aFactor
 {
-    NSData *imgData = [self TIFFRepresentation];
-    NSBitmapImageRep *imageRep = [NSBitmapImageRep imageRepWithData:imgData];
-    [imageRep setSize:self.size];
-    NSDictionary *imgProps = [NSDictionary dictionaryWithObject:[NSNumber numberWithFloat:aFactor] forKey:NSImageCompressionFactor];
-    imgData = [imageRep representationUsingType:NSJPEGFileType properties:imgProps];
-    return imgData;
+    return [self compressFactor:aFactor outFileType:NSJPEGFileType];
 }
 
+- (NSData *)compressFactor:(CGFloat)aFactor outFileType:(NSBitmapImageFileType)fileType
+{
+    NSBitmapImageRep *bitmapRep = nil;
+    for (NSImageRep *imageRep in [self representations])
+    {
+        if ([imageRep isKindOfClass:[NSBitmapImageRep class]])
+        {
+            bitmapRep = (NSBitmapImageRep *)imageRep;
+            break;
+        }
+    }
+    if (!bitmapRep)
+    {
+        bitmapRep = [NSBitmapImageRep imageRepWithData:[self TIFFRepresentation]];
+    }
+    [bitmapRep setSize:self.size];
+    NSDictionary *imgProps = [NSDictionary dictionaryWithObject:[NSNumber numberWithFloat:aFactor] forKey:NSImageCompressionFactor];
+    NSData *imgData = [bitmapRep representationUsingType:fileType properties:imgProps];
+    return imgData;
+}
 
 
 - (NSData *)halfFuntionForMaxFileSize:(NSInteger)maxSize
@@ -219,6 +234,37 @@
         }
     }
     return tempData;
+}
+
+- (BOOL)writeToFile:(NSURL *)fileURL
+{
+    NSData *imageData = [self compressFactor:1 outFileType:[self fileTypeForFile:fileURL.path]];
+    NSError *error;
+    BOOL success = [imageData writeToURL:fileURL options:NSDataWritingAtomic error:&error];
+    NSLog(@"%@;;%@",error.localizedDescription,fileURL.path);
+    return success;
+}
+
+- (NSBitmapImageFileType)fileTypeForFile:(NSString *)file
+{
+    NSString *extension = [[file pathExtension] lowercaseString];
+    
+    if ([extension containsString:@"png"])
+    {
+        return NSPNGFileType;
+    }
+    else if ([extension containsString:@"gif"])
+    {
+        return NSGIFFileType;
+    }
+    else if ([extension containsString:@"jpg"] || [extension containsString:@"jpeg"])
+    {
+        return NSJPEGFileType;
+    }
+    else
+    {
+        return NSTIFFFileType;
+    }
 }
 
 @end
